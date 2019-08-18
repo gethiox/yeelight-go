@@ -65,6 +65,7 @@ func NewBulb(ip string, port int) *Bulb {
 		make(map[int]chan Response),
 		sync.Mutex{},
 	}
+	// I know It looks badly, but "It is working? It is working"
 	bulb.standardCommands.commander = bulb
 	bulb.commonCommands.commander = bulb
 	bulb.Bg.commander = bulb

@@ -7,7 +7,7 @@ import (
 // Common commands defines shared commands for standard mode and background mode
 type commonCommands struct {
 	commander commander
-	prefix    string
+	prefix    string // used as a prefix in command names, empty by default. can support background commands by "bg_".
 }
 
 // Temperature sets device temperature, range 1700-6500

@@ -65,8 +65,10 @@ func main() {
 }
 ```
 
+### Available commands
+
 Bulb functions:
-<pre lang="go"><code>
+```go
 // commands for standard and background light:
 func Temperature(temp, duration int) error 
 func RGB(rgb, duration int) error 
@@ -74,7 +76,7 @@ func HSV(hue, saturation, duration int) error
 func Brightness(brightness, duration int) error 
 func StartColorFlow(count int, action CfAction, flowExpression FlowExpression) error 
 func StopColorFlow() error 
-<s>func SetScene(scene Scene) error</s> // not implemented
+func SetScene(scene Scene) error // not implemented
 func SetDefault() error 
 func PowerOn(duration int) error 
 func PowerOnWithMode(duration int, mode Mode) error 
@@ -85,26 +87,26 @@ func Toggle() error
 func DevToggle() error 
 
 // standard only:
-<b>func StartMusic(hostIP string) (error, musicSupportedCommands)</b>b>
-<s>func Prop(props ...Property) (map[string]interface{}, error)</s> // not implemented
+func Prop(props ...Property) (map[string]interface{}, error) // not implemented
 func CronAdd(jobType CronType, minutes int) error 
-<s>func CronGet(jobType CronType) error</s> // not implemented
+func CronGet(jobType CronType) error // not implemented
 func CronDel(jobType CronType) error 
 func SetAdjust(action Action, prop AdjustProp) error 
 func AdjustBright(percentage, duration int) error 
 func AdjustTemperature(percentage, duration int) error 
 func AdjustColor(percentage, duration int) error 
 func SetName(name string) error 
-</code></pre>
+func StartMusic(hostIP string) (error, musicSupportedCommands)
+```
 
-Music functions: (performed on object retuned by `StartMusic()`)
-<pre><code lang="go">
+Music functions: (performed on object returned by `StartMusic()`)
+```go
 func Temperature(temp, duration int)
 func RGB(rgb, duration int)
 func HSV(hue, saturation, duration int)
 func Brightness(brightness, duration int)
 func StartColorFlow(count int, action CfAction, flowExpression FlowExpression)
 func StopColorFlow()
-</code></pre>
+```
 
-More detailed documentation is available in source code - should be extracted with IDE of your 
+More detailed documentation is available in source code - should be extracted and available in IDE of your choice.

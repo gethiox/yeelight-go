@@ -46,7 +46,7 @@ func main() {
 				panic(err)
 			}
 
-			err, music := bulb.StartMusic()
+			err, music := bulb.StartMusic("192.168.10.100") // your (client's) ip address
 			if err != nil {
 				panic(err)
 			}

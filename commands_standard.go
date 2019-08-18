@@ -94,9 +94,9 @@ func (c *standardCommands) SetName(name string) error {
 	)
 }
 
-// StartMusic starts music mode.
+// StartMusic starts music mode. hostIP (client IP) is required to tell device where to connect.
 // You can perform operations on returned music object without quota limitations
-func (c *standardCommands) StartMusic() (error, musicSupportedCommands) {
+func (c *standardCommands) StartMusic(hostIP string) (error, musicSupportedCommands) {
 	listener, port, err := openSocket("", 1023, 1<<16-1) // first 1024 ports are root-only
 	if err != nil {
 		return err, nil
@@ -128,7 +128,7 @@ func (c *standardCommands) StartMusic() (error, musicSupportedCommands) {
 
 	log.Printf("[music] Initializating Music Mode...")
 	err = c.commander.executeCommand(
-		partialCommand{"set_music", params{1, "192.168.10.100", port}},
+		partialCommand{"set_music", params{1, hostIP, port}},
 	)
 	if err != nil {
 		return err, nil

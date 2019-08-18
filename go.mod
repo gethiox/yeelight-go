@@ -1,3 +1,3 @@
-module github.com/gethiox/go-yee-light-go
+module github.com/gethiox/yeelight-go
 
 go 1.12

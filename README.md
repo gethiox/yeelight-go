@@ -2,12 +2,62 @@
 
 [![dinosaur with bulb in paw](resources/yee.gif)](https://www.youtube.com/watch?v=q6EoRBvdVPQ)
 
+Go library to control [YEELIGHT](https://www.yeelight.com/) devices for dinosaurs with scary faces
 
 # Usage
 
-Device auto-discovery are not implemented yet, You'll need to connect to them directly with IP address. 
+### Disclaimer
+- Library is not in stable state and not finished (few missing features)
+- User interface may be slightly changed before 1.0 release
+- Device auto-discovery are not implemented yet, You'll need to connect to them directly with IP address. 
 
-Example
+### Available commands
+
+Bulb functions:
+```go
+// commands for standard and background light:
+func Temperature(temp, duration int) error {} 
+func RGB(rgb, duration int) error {} 
+func HSV(hue, saturation, duration int) error {} 
+func Brightness(brightness, duration int) error {} 
+func StartColorFlow(count int, action CfAction, flowExpression FlowExpression) error {} 
+func StopColorFlow() error {} 
+func SetScene(scene Scene) error {} // not implemented
+func SetDefault() error {} 
+func PowerOn(duration int) error {} 
+func PowerOnWithMode(duration int, mode Mode) error {} 
+func PowerOff(duration int) error {} 
+func Toggle() error {}
+
+// background only:
+func DevToggle() error {} 
+
+// standard only:
+func Prop(props ...Property) (map[string]interface{}, error) {} // not implemented
+func CronAdd(jobType CronType, minutes int) error {} 
+func CronGet(jobType CronType) error {} // not implemented
+func CronDel(jobType CronType) error {} 
+func SetAdjust(action Action, prop AdjustProp) error {} 
+func AdjustBright(percentage, duration int) error {} 
+func AdjustTemperature(percentage, duration int) error {} 
+func AdjustColor(percentage, duration int) error {} 
+func SetName(name string) error {} 
+func StartMusic(hostIP string) (error, musicSupportedCommands) {}
+```
+
+Music functions: (performed on object returned by `StartMusic()`)
+```go
+func Temperature(temp, duration int) {}
+func RGB(rgb, duration int) {}
+func HSV(hue, saturation, duration int) {}
+func Brightness(brightness, duration int) {}
+func StartColorFlow(count int, action CfAction, flowExpression FlowExpression) {}
+func StopColorFlow() {}
+```
+
+More detailed documentation is available in source code - should be extracted and available in IDE of your choice.
+
+### Example
 ```go
 package main
 
@@ -64,49 +114,3 @@ func main() {
 	gorutines.Wait()
 }
 ```
-
-### Available commands
-
-Bulb functions:
-```go
-// commands for standard and background light:
-func Temperature(temp, duration int) error {} 
-func RGB(rgb, duration int) error {} 
-func HSV(hue, saturation, duration int) error {} 
-func Brightness(brightness, duration int) error {} 
-func StartColorFlow(count int, action CfAction, flowExpression FlowExpression) error {} 
-func StopColorFlow() error {} 
-func SetScene(scene Scene) error {} // not implemented
-func SetDefault() error {} 
-func PowerOn(duration int) error {} 
-func PowerOnWithMode(duration int, mode Mode) error {} 
-func PowerOff(duration int) error {} 
-func Toggle() error {}
-
-// background only:
-func DevToggle() error {} 
-
-// standard only:
-func Prop(props ...Property) (map[string]interface{}, error) {} // not implemented
-func CronAdd(jobType CronType, minutes int) error {} 
-func CronGet(jobType CronType) error {} // not implemented
-func CronDel(jobType CronType) error {} 
-func SetAdjust(action Action, prop AdjustProp) error {} 
-func AdjustBright(percentage, duration int) error {} 
-func AdjustTemperature(percentage, duration int) error {} 
-func AdjustColor(percentage, duration int) error {} 
-func SetName(name string) error {} 
-func StartMusic(hostIP string) (error, musicSupportedCommands) {}
-```
-
-Music functions: (performed on object returned by `StartMusic()`)
-```go
-func Temperature(temp, duration int) {}
-func RGB(rgb, duration int) {}
-func HSV(hue, saturation, duration int) {}
-func Brightness(brightness, duration int) {}
-func StartColorFlow(count int, action CfAction, flowExpression FlowExpression) {}
-func StopColorFlow() {}
-```
-
-More detailed documentation is available in source code - should be extracted and available in IDE of your choice.

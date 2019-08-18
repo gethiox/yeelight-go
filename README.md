@@ -16,7 +16,7 @@ import (
     "sync"
     "time"
 
-    yl "github.com/gethiox/go-yee-light-go"
+    yl "github.com/gethiox/yeelight-go"
 )
 
 func main() {

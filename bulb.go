@@ -114,7 +114,7 @@ func openSocket(host string, min, max int) (net.Listener, int, error) {
 		return nil, 0, errors.New("min value cannot be greather than max value")
 	}
 	if min < 0 || max > 65535 {
-		return nil, 0, errors.New("range must be 0 - 65535")
+		return nil, 0, errors.New("port number must be in range 0 - 65535")
 	}
 
 	for port := min; port <= max; port++ {

@@ -1,4 +1,4 @@
-# Yee Light
+# Yee Light 
 
 [![dinosaur with bulb in paw](resources/yee.gif)](https://www.youtube.com/watch?v=q6EoRBvdVPQ)
 
@@ -6,10 +6,15 @@ Go library to control [YEELIGHT](https://www.yeelight.com/) devices for dinosaur
 
 # Usage
 
+[![](https://godoc.org/github.com/gethiox/yeelight-go?status.svg)](http://godoc.org/github.com/gethiox/yeelight-go)
+
 ### Disclaimer
 - Library is not in stable state and not finished (few missing features)
 - User interface may be slightly changed before 1.0 release
 - Device auto-discovery are not implemented yet, You'll need to connect to them directly with IP address. 
+- Tested only on one type of bulb ([Yeelight Smart LED Bulb (Color)](https://www.yeelight.com/en_US/product/lemon-color)),
+  I can't guarantee that everything will work correctly on other devices
+
 
 ### Available commands
 
@@ -22,7 +27,6 @@ func HSV(hue, saturation, duration int) error {}
 func Brightness(brightness, duration int) error {} 
 func StartColorFlow(count int, action CfAction, flowExpression FlowExpression) error {} 
 func StopColorFlow() error {} 
-func SetScene(scene Scene) error {} // not implemented
 func SetDefault() error {} 
 func PowerOn(duration int) error {} 
 func PowerOnWithMode(duration int, mode Mode) error {} 
@@ -33,9 +37,7 @@ func Toggle() error {}
 func DevToggle() error {} 
 
 // standard only:
-func Prop(props ...Property) (map[string]interface{}, error) {} // not implemented
 func CronAdd(jobType CronType, minutes int) error {} 
-func CronGet(jobType CronType) error {} // not implemented
 func CronDel(jobType CronType) error {} 
 func SetAdjust(action Action, prop AdjustProp) error {} 
 func AdjustBright(percentage, duration int) error {} 
@@ -43,10 +45,8 @@ func AdjustTemperature(percentage, duration int) error {}
 func AdjustColor(percentage, duration int) error {} 
 func SetName(name string) error {} 
 func StartMusic(hostIP string) (error, musicSupportedCommands) {}
-```
 
-Music functions: (performed on object returned by `StartMusic()`)
-```go
+// Music
 func Temperature(temp, duration int) {}
 func RGB(rgb, duration int) {}
 func HSV(hue, saturation, duration int) {}
@@ -55,7 +55,6 @@ func StartColorFlow(count int, action CfAction, flowExpression FlowExpression) {
 func StopColorFlow() {}
 ```
 
-More detailed documentation is available in source code - should be extracted and available in IDE of your choice.
 
 ### Example
 ```go

@@ -21,38 +21,38 @@ Go library to control [YEELIGHT](https://www.yeelight.com/) devices for dinosaur
 Bulb functions:
 ```go
 // commands for standard and background light:
-func Temperature(temp, duration int) error {} 
-func RGB(rgb, duration int) error {} 
-func HSV(hue, saturation, duration int) error {} 
-func Brightness(brightness, duration int) error {} 
-func StartColorFlow(count int, action CfAction, flowExpression FlowExpression) error {} 
-func StopColorFlow() error {} 
-func SetDefault() error {} 
-func PowerOn(duration int) error {} 
-func PowerOnWithMode(duration int, mode Mode) error {} 
-func PowerOff(duration int) error {} 
-func Toggle() error {}
+func Temperature(temp, duration int) error                                           {}
+func RGB(rgb, duration int) error                                                    {}
+func HSV(hue, saturation, duration int) error                                        {}
+func Brightness(brightness, duration int) error                                      {}
+func StartColorFlow(count int, action CfAction, flowExpression FlowExpression) error {}
+func StopColorFlow() error                                                           {}
+func SetDefault() error                                                              {}
+func PowerOn(duration int) error                                                     {}
+func PowerOnWithMode(duration int, mode Mode) error                                  {}
+func PowerOff(duration int) error                                                    {}
+func Toggle() error                                                                  {}
 
 // background only:
 func DevToggle() error {} 
 
 // standard only:
-func CronAdd(jobType CronType, minutes int) error {} 
-func CronDel(jobType CronType) error {} 
-func SetAdjust(action Action, prop AdjustProp) error {} 
-func AdjustBright(percentage, duration int) error {} 
-func AdjustTemperature(percentage, duration int) error {} 
-func AdjustColor(percentage, duration int) error {} 
-func SetName(name string) error {} 
+func CronAdd(jobType CronType, minutes int) error              {}
+func CronDel(jobType CronType) error                           {}
+func SetAdjust(action Action, prop AdjustProp) error           {}
+func AdjustBright(percentage, duration int) error              {}
+func AdjustTemperature(percentage, duration int) error         {}
+func AdjustColor(percentage, duration int) error               {}
+func SetName(name string) error                                {}
 func StartMusic(hostIP string) (error, musicSupportedCommands) {}
 
 // Music
-func Temperature(temp, duration int) {}
-func RGB(rgb, duration int) {}
-func HSV(hue, saturation, duration int) {}
-func Brightness(brightness, duration int) {}
+func Temperature(temp, duration int)                                           {}
+func RGB(rgb, duration int)                                                    {}
+func HSV(hue, saturation, duration int)                                        {}
+func Brightness(brightness, duration int)                                      {}
 func StartColorFlow(count int, action CfAction, flowExpression FlowExpression) {}
-func StopColorFlow() {}
+func StopColorFlow()                                                           {}
 ```
 
 

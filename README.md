@@ -75,12 +75,12 @@ import (
 )
 
 func main() {
-    var bulbs []*yl.Bulb
+	var bulbs []*yl.Bulb
 	
     var ipTemplate = "192.168.10.%d"
 	var octets = []int{220, 221, 222, 223}
 	
-    // Connecting to many bulbs at the same time
+	// Connecting to many bulbs at the same time
 	for _, octet := range octets {
 		ip := fmt.Sprintf(ipTemplate, octet)
 		bulb := yl.NewBulb(ip) 
@@ -95,7 +95,7 @@ func main() {
 	for _, bulb := range bulbs {
 		jobs.Add(1)
 
-        // running goroutine for every bulb separately
+		// running goroutine for every bulb separately
 		go func(bulb *yl.Bulb) {
 			var err error
 
@@ -105,13 +105,13 @@ func main() {
 			}
 
 			// trying to start music server on "enp0s25" interface
-            // empty name ("") may be passed for starting music server on first found interface
-            err, music := bulb.StartMusic("enp0s25")
+			// empty name ("") may be passed for starting music server on first found interface
+			err, music := bulb.StartMusic("enp0s25")
 			if err != nil {
 				panic(err)
 			}
 
-            // go through hue range ten times
+			// go through hue range ten times
 			for iterations := 0; iterations < 10; iterations++ {
 				for i := 0; i < 360; i++ {
 					music.HSV(i, 100, 50)

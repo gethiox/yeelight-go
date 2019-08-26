@@ -76,10 +76,10 @@ import (
 
 func main() {
 	var bulbs []*yl.Bulb
-	
-    var ipTemplate = "192.168.10.%d"
+
+	var ipTemplate = "192.168.10.%d"
 	var octets = []int{220, 221, 222, 223}
-	
+
 	// Connecting to many bulbs at the same time
 	for _, octet := range octets {
 		ip := fmt.Sprintf(ipTemplate, octet)

@@ -2,7 +2,9 @@ package yeelight
 
 import (
 	"errors"
+	"fmt"
 	"log"
+	"net"
 	"time"
 )
 
@@ -94,53 +96,162 @@ func (c *standardCommands) SetName(name string) error {
 	)
 }
 
-// StartMusic starts music mode. hostIP (client IP) is required to tell device where to connect.
-// You can perform operations on returned music object without quota limitations
-func (c *standardCommands) StartMusic(hostIP string) (error, musicSupportedCommands) {
-	listener, port, err := openSocket("", 1023, 1<<16-1) // first 1024 ports are root-only
+func findIface(name string) ([]net.Interface, error) {
+	var ifacesToReturn []net.Interface
+
+	interfaces, err := net.Interfaces()
 	if err != nil {
-		return err, nil
+		return []net.Interface{}, fmt.Errorf("iface not found: %v", err)
 	}
 
-	incoming := make(chan *Music)
-	defer close(incoming)
+	for _, iface := range interfaces {
+		if iface.Name == name {
+			ifacesToReturn = append(ifacesToReturn, iface)
+		}
+	}
+	if len(ifacesToReturn) == 0 {
+		return ifacesToReturn, fmt.Errorf("iface \"%s\" not found", name)
+	}
+	return ifacesToReturn, nil
+}
 
-	go func() {
+// findIPv4Addr finds first valid IPv4 address on given net.Interface
+func findIPv4Addr(iface net.Interface) (net.IP, error) {
+	var retAddr net.IP
+
+	addresses, err := iface.Addrs()
+	if err != nil {
+		return retAddr, fmt.Errorf("failed to fetch binded addresses on \"%s\" interface: %v", iface.Name, err)
+	}
+
+	for _, addr := range addresses {
+		ip, _, err := net.ParseCIDR(addr.String())
+		if err != nil {
+			continue
+		}
+
+		// check if ip is IPv4 type
+		if ip.To4() != nil {
+			return ip, nil
+		}
+	}
+	return net.IP{}, errors.New(fmt.Sprintf("IPv4 not found on \"%s\" interfgace", iface.Name))
+}
+
+// StartMusic starts tries to run music mode.
+// You can perform operations on returned music object without quota limitations
+// Interface name can be passed to select exact interface for music server on first assigned IPv4 address
+// (bulb needs to connect to opened socket by client), empty string may be passed ("") for
+// trying to connect on first available (up and non-loopback) interface and first assigned IPv4 address
+func (c *standardCommands) StartMusic(ifaceName string) (musicSupportedCommands, error) {
+	// TODO: Check "ignored" error when iptables not realoaded (personal archlinux issue)
+	var (
+		ifacesToTry []net.Interface
+		err         error
+	)
+
+	if ifaceName == "" {
+		log.Printf(
+			"[music] iface name not specified, trying to bind on " +
+				"first available up and not loopback (localhost) interface...")
+		ifacesToTry, err = net.Interfaces()
+		if err != nil {
+			return nil, fmt.Errorf("failed to read available interfaces: %v", err)
+		}
+	} else {
+		log.Printf("[music] trying to bind on \"%s\" iface...", ifaceName)
+		ifacesToTry, err = findIface(ifaceName)
+		if err != nil {
+			return nil, fmt.Errorf("[music] initialization failed: %v", err)
+		}
+	}
+
+	var (
+		binded      bool
+		bindedIface net.Interface
+		// As far as yeelight devices mainly supports ipv4 only, I'm assuming IPv4 communication only
+		bindedIPv4Addr net.IP
+		bindedPort     int
+		listener       net.Listener
+	)
+
+	for _, iface := range ifacesToTry {
+		if iface.Flags&net.FlagUp == 0 || iface.Flags&net.FlagLoopback != 0 {
+			// Interface is neither up or non-loopback (localhost)
+			continue
+		}
+
+		bindedIPv4Addr, err = findIPv4Addr(iface)
+		if err != nil {
+			// failing find a valid IPv4 address
+			continue
+		}
+
+		// TODO: subnet validation could be invoked here
+
+		listener, bindedPort, err = openSocket(bindedIPv4Addr.String(), 1023, 1<<16-1) // first 1024 ports are root-only
+		if err != nil {
+			// port opening failed on 1024-65535 range
+			continue
+		}
+
+		bindedIface = iface
+		binded = true
+		break
+	}
+
+	if !binded {
+		return nil, fmt.Errorf("failed to bind on any of given interfaces")
+	}
+	log.Printf("[music] binded on \"%v\" iface on \"%s\" address on \"%d\" port",
+		bindedIface.Name, bindedIPv4Addr, bindedPort)
+
+	incomingConnection := make(chan net.Conn)
+	defer close(incomingConnection)
+
+	// starting "music server" and waiting for first incoming connection
+	go func(listener net.Listener) {
 		log.Printf("[music] Waiting for a device connection...")
 		conn, err := listener.Accept()
 		if err != nil {
-			incoming <- nil
+			log.Printf("[music] Device fonnection failed: %v", err)
 			return
 		}
 		log.Printf("[music] Device connected!")
+		incomingConnection <- conn
 
 		var buf = make([]byte, 1)
-		go func() {
+		go func(conn net.Conn) { // not very clever solution but at least something for debugging
 			_, err = conn.Read(buf)
-			log.Printf("[music] Connection closed")
-		}()
-
-		music := NewMusic(conn)
-		incoming <- music
-	}()
-
-	time.Sleep(time.Second * 1)
+			log.Printf("[music] Device disconnected")
+		}(conn)
+	}(listener)
 
 	log.Printf("[music] Initializating Music Mode...")
 	err = c.commander.executeCommand(
-		partialCommand{"set_music", params{1, hostIP, port}},
+		partialCommand{"set_music", params{1, bindedIPv4Addr, bindedPort}},
 	)
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 	log.Printf("[music] Music Mode Initialized!")
 
-	music := <-incoming
-	if music == nil {
-		return errors.New("[music] Connection failed"), nil
-	}
+	select {
+	case conn := <-incomingConnection:
+		music := NewMusic(conn)
+		if music == nil {
+			return nil, errors.New("[music] Connection failed")
+		}
 
-	return nil, music
+		return music, nil
+	case <-time.After(time.Second * 2): // 2 second timeout
+		log.Println("[music] ")
+		err := listener.Close()
+		if err != nil {
+			log.Printf("[music] failed to close music server: %v", err)
+		}
+		return nil, fmt.Errorf("device connection timeout")
+	}
 }
 
 // chooseEffect returns effect string Accordingly to given duration value.

@@ -4,58 +4,63 @@
 
 Go library to control [YEELIGHT](https://www.yeelight.com/) devices for dinosaurs with scary faces
 
-# Usage
-
 ### Disclaimer
 - Library is not in stable state and not finished (few missing features)
 - User interface may be slightly changed before 1.0 release
 - Device auto-discovery are not implemented yet, You'll need to connect to them directly with IP address. 
+- Tested only on one type of bulb ([Yeelight Smart LED Bulb (Color)](https://www.yeelight.com/en_US/product/lemon-color)),
+  I can't guarantee that everything will work correctly on other devices
+
+# Usage
+
+[![](https://godoc.org/github.com/gethiox/yeelight-go?status.svg)](http://godoc.org/github.com/gethiox/yeelight-go)
+
+make sure LAN control is enabled in your device: 
+![](resources/enabling_lan_control.png)
+
+Device initialization:
+```go
+yl.NewBulb("192.168.0.123")
+```
 
 ### Available commands
 
-Bulb functions:
+Device functions:
 ```go
 // commands for standard and background light:
-func Temperature(temp, duration int) error {} 
-func RGB(rgb, duration int) error {} 
-func HSV(hue, saturation, duration int) error {} 
-func Brightness(brightness, duration int) error {} 
-func StartColorFlow(count int, action CfAction, flowExpression FlowExpression) error {} 
-func StopColorFlow() error {} 
-func SetScene(scene Scene) error {} // not implemented
-func SetDefault() error {} 
-func PowerOn(duration int) error {} 
-func PowerOnWithMode(duration int, mode Mode) error {} 
-func PowerOff(duration int) error {} 
-func Toggle() error {}
+func Temperature(temp, duration int) error                                           {}
+func RGB(rgb, duration int) error                                                    {}
+func HSV(hue, saturation, duration int) error                                        {}
+func Brightness(brightness, duration int) error                                      {}
+func StartColorFlow(count int, action CfAction, flowExpression FlowExpression) error {}
+func StopColorFlow() error                                                           {}
+func SetDefault() error                                                              {}
+func PowerOn(duration int) error                                                     {}
+func PowerOnWithMode(duration int, mode Mode) error                                  {}
+func PowerOff(duration int) error                                                    {}
+func Toggle() error                                                                  {}
 
-// background only:
+// for background only:
 func DevToggle() error {} 
 
-// standard only:
-func Prop(props ...Property) (map[string]interface{}, error) {} // not implemented
-func CronAdd(jobType CronType, minutes int) error {} 
-func CronGet(jobType CronType) error {} // not implemented
-func CronDel(jobType CronType) error {} 
-func SetAdjust(action Action, prop AdjustProp) error {} 
-func AdjustBright(percentage, duration int) error {} 
-func AdjustTemperature(percentage, duration int) error {} 
-func AdjustColor(percentage, duration int) error {} 
-func SetName(name string) error {} 
-func StartMusic(hostIP string) (error, musicSupportedCommands) {}
-```
+// for standard only:
+func CronAdd(jobType CronType, minutes int) error                 {}
+func CronDel(jobType CronType) error                              {}
+func SetAdjust(action Action, prop AdjustProp) error              {}
+func AdjustBright(percentage, duration int) error                 {}
+func AdjustTemperature(percentage, duration int) error            {}
+func AdjustColor(percentage, duration int) error                  {}
+func SetName(name string) error                                   {}
+func StartMusic(ifaceName string) (error, musicSupportedCommands) {}
 
-Music functions: (performed on object returned by `StartMusic()`)
-```go
-func Temperature(temp, duration int) {}
-func RGB(rgb, duration int) {}
-func HSV(hue, saturation, duration int) {}
-func Brightness(brightness, duration int) {}
+// commands available in music mode
+func Temperature(temp, duration int)                                           {}
+func RGB(rgb, duration int)                                                    {}
+func HSV(hue, saturation, duration int)                                        {}
+func Brightness(brightness, duration int)                                      {}
 func StartColorFlow(count int, action CfAction, flowExpression FlowExpression) {}
-func StopColorFlow() {}
+func StopColorFlow()                                                           {}
 ```
-
-More detailed documentation is available in source code - should be extracted and available in IDE of your choice.
 
 ### Example
 ```go
@@ -70,13 +75,15 @@ import (
 )
 
 func main() {
-	var ipTemplate = "192.168.10.%d"
+    var bulbs []*yl.Bulb
+	
+    var ipTemplate = "192.168.10.%d"
 	var octets = []int{220, 221, 222, 223}
-	var bulbs []*yl.Bulb
-
+	
+    // Connecting to many bulbs at the same time
 	for _, octet := range octets {
 		ip := fmt.Sprintf(ipTemplate, octet)
-		bulb := yl.NewBulb(ip, 55443)
+		bulb := yl.NewBulb(ip) 
 		err := bulb.Connect()
 		if err != nil {
 			panic(err)
@@ -84,10 +91,11 @@ func main() {
 		bulbs = append(bulbs, bulb)
 	}
 
-	gorutines := sync.WaitGroup{}
+	jobs := sync.WaitGroup{}
 	for _, bulb := range bulbs {
-		gorutines.Add(1)
+		jobs.Add(1)
 
+        // running goroutine for every bulb separately
 		go func(bulb *yl.Bulb) {
 			var err error
 
@@ -96,11 +104,14 @@ func main() {
 				panic(err)
 			}
 
-			err, music := bulb.StartMusic("192.168.10.100") // your (client's) ip address
+			// trying to start music server on "enp0s25" interface
+            // empty name ("") may be passed for starting music server on first found interface
+            err, music := bulb.StartMusic("enp0s25")
 			if err != nil {
 				panic(err)
 			}
 
+            // go through hue range ten times
 			for iterations := 0; iterations < 10; iterations++ {
 				for i := 0; i < 360; i++ {
 					music.HSV(i, 100, 50)
@@ -108,9 +119,9 @@ func main() {
 				}
 			}
 
-			gorutines.Done()
+			jobs.Done()
 		}(bulb)
 	}
-	gorutines.Wait()
+	jobs.Wait()
 }
 ```

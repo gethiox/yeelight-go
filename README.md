@@ -69,13 +69,15 @@ import (
 )
 
 func main() {
-	var ipTemplate = "192.168.10.%d"
+    var bulbs []*yl.Bulb
+	
+    var ipTemplate = "192.168.10.%d"
 	var octets = []int{220, 221, 222, 223}
-	var bulbs []*yl.Bulb
-
+	
+    // Connecting to many bulbs at the same time
 	for _, octet := range octets {
 		ip := fmt.Sprintf(ipTemplate, octet)
-		bulb := yl.NewBulb(ip, 55443)
+		bulb := yl.NewBulb(ip) 
 		err := bulb.Connect()
 		if err != nil {
 			panic(err)
@@ -83,10 +85,11 @@ func main() {
 		bulbs = append(bulbs, bulb)
 	}
 
-	gorutines := sync.WaitGroup{}
+	jobs := sync.WaitGroup{}
 	for _, bulb := range bulbs {
-		gorutines.Add(1)
+		jobs.Add(1)
 
+        // running goroutine for every bulb separately
 		go func(bulb *yl.Bulb) {
 			var err error
 
@@ -95,11 +98,14 @@ func main() {
 				panic(err)
 			}
 
-			err, music := bulb.StartMusic("192.168.10.100") // your (client's) ip address
+			// trying to start music server on "enp0s25" interface
+            // empty name ("") may be passed for starting music server on first found interface
+            err, music := bulb.StartMusic("enp0s25")
 			if err != nil {
 				panic(err)
 			}
 
+            // go through hue range ten times
 			for iterations := 0; iterations < 10; iterations++ {
 				for i := 0; i < 360; i++ {
 					music.HSV(i, 100, 50)
@@ -107,9 +113,9 @@ func main() {
 				}
 			}
 
-			gorutines.Done()
+			jobs.Done()
 		}(bulb)
 	}
-	gorutines.Wait()
+	jobs.Wait()
 }
 ```

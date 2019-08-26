@@ -54,13 +54,13 @@ func (b *Bulb) Disconnect() error {
 }
 
 // NewBulb creates Bulb instance, default protocol port: 55443
-func NewBulb(ip string, port int) *Bulb {
+func NewBulb(ip string) *Bulb {
 	bulb := &Bulb{
 		standardCommands{},
 		commonCommands{},
 		backgroundLightCommands{},
 		ip,
-		port,
+		55443, // 55443 is a constant protocol port
 		nil,
 		make(map[int]chan Response),
 		sync.Mutex{},

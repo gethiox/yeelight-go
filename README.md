@@ -4,10 +4,6 @@
 
 Go library to control [YEELIGHT](https://www.yeelight.com/) devices for dinosaurs with scary faces
 
-# Usage
-
-[![](https://godoc.org/github.com/gethiox/yeelight-go?status.svg)](http://godoc.org/github.com/gethiox/yeelight-go)
-
 ### Disclaimer
 - Library is not in stable state and not finished (few missing features)
 - User interface may be slightly changed before 1.0 release
@@ -15,10 +11,21 @@ Go library to control [YEELIGHT](https://www.yeelight.com/) devices for dinosaur
 - Tested only on one type of bulb ([Yeelight Smart LED Bulb (Color)](https://www.yeelight.com/en_US/product/lemon-color)),
   I can't guarantee that everything will work correctly on other devices
 
+# Usage
+
+[![](https://godoc.org/github.com/gethiox/yeelight-go?status.svg)](http://godoc.org/github.com/gethiox/yeelight-go)
+
+make sure LAN control is enabled in your device: 
+![](resources/enabling_lan_control.png)
+
+Device initialization:
+```go
+yl.NewBulb("192.168.0.123")
+```
 
 ### Available commands
 
-Bulb functions:
+Device functions:
 ```go
 // commands for standard and background light:
 func Temperature(temp, duration int) error                                           {}
@@ -33,20 +40,20 @@ func PowerOnWithMode(duration int, mode Mode) error                             
 func PowerOff(duration int) error                                                    {}
 func Toggle() error                                                                  {}
 
-// background only:
+// for background only:
 func DevToggle() error {} 
 
-// standard only:
-func CronAdd(jobType CronType, minutes int) error              {}
-func CronDel(jobType CronType) error                           {}
-func SetAdjust(action Action, prop AdjustProp) error           {}
-func AdjustBright(percentage, duration int) error              {}
-func AdjustTemperature(percentage, duration int) error         {}
-func AdjustColor(percentage, duration int) error               {}
-func SetName(name string) error                                {}
-func StartMusic(hostIP string) (error, musicSupportedCommands) {}
+// for standard only:
+func CronAdd(jobType CronType, minutes int) error                 {}
+func CronDel(jobType CronType) error                              {}
+func SetAdjust(action Action, prop AdjustProp) error              {}
+func AdjustBright(percentage, duration int) error                 {}
+func AdjustTemperature(percentage, duration int) error            {}
+func AdjustColor(percentage, duration int) error                  {}
+func SetName(name string) error                                   {}
+func StartMusic(ifaceName string) (error, musicSupportedCommands) {}
 
-// Music
+// commands available in music mode
 func Temperature(temp, duration int)                                           {}
 func RGB(rgb, duration int)                                                    {}
 func HSV(hue, saturation, duration int)                                        {}
@@ -54,7 +61,6 @@ func Brightness(brightness, duration int)                                      {
 func StartColorFlow(count int, action CfAction, flowExpression FlowExpression) {}
 func StopColorFlow()                                                           {}
 ```
-
 
 ### Example
 ```go

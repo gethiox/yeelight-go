@@ -1,4 +1,4 @@
-# Yee Light
+# YeeLight
 
 [![dinosaur with bulb in paw](resources/yee.gif)](https://www.youtube.com/watch?v=q6EoRBvdVPQ)
 

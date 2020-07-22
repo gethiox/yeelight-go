@@ -88,7 +88,9 @@ func (b *Bulb) executeCommand(c partialCommand) error {
 
 	defer func(ch chan Response, id int) {
 		close(ch)
+		b.resultsMtx.Lock()
 		delete(b.results, id)
+		b.resultsMtx.Unlock()
 	}(respChan, id)
 
 	realCommand := newCompleteCommand(c, id)
@@ -96,7 +98,7 @@ func (b *Bulb) executeCommand(c partialCommand) error {
 	if err != nil {
 		return err
 	}
-	log.Printf("[%s] request: %s\n", b.Ip, message)
+	// log.Printf("[%s] request: %s\n", b.Ip, message)
 	message = append(message, CR, LF)
 
 	_, err = b.conn.Write(message)
@@ -107,28 +109,6 @@ func (b *Bulb) executeCommand(c partialCommand) error {
 	// waiting for response on that request
 	resp := <-respChan
 	return resp.ok()
-}
-
-func openSocket(host string, min, max int) (net.Listener, int, error) {
-	if min > max {
-		return nil, 0, errors.New("min value cannot be greather than max value")
-	}
-	if min < 0 || max > 65535 {
-		return nil, 0, errors.New("port number must be in range 0 - 65535")
-	}
-
-	for port := min; port <= max; port++ {
-		var ip = "" // binding on all interfaces
-		address := fmt.Sprintf("%s:%d", ip, port)
-
-		listener, err := net.Listen("tcp", address)
-		if err != nil {
-			continue
-		}
-		return listener, port, nil
-	}
-	return nil, 0, errors.New("no available free ports in given range")
-
 }
 
 // keysExists returns a bool when given map contains all of given key names

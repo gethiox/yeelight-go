@@ -1,5 +1,13 @@
 package yeelight
 
+import (
+	"fmt"
+	"net"
+	"strings"
+	"sync"
+	"time"
+)
+
 const (
 	LF = byte('\n')
 	CR = byte('\r')
@@ -90,4 +98,160 @@ type partialCommand struct {
 
 type commander interface {
 	executeCommand(partialCommand) error
+}
+
+func timeToMs(duration time.Duration) int {
+	return int(duration / time.Millisecond)
+}
+
+type TmpStruct struct {
+	Location  string   `yee:"Location"`   //
+	ID        string   `yee:"id"`         //
+	Model     string   `yee:"model"`      // color
+	FwVer     int      `yee:"fw_ver"`     // 65
+	Support   []string `yee:"support"`    // "get_prop set_default set_power ..."
+	Power     bool     `yee:"power"`      // on
+	Bright    int      `yee:"bright"`     // 100
+	ColorMode int      `yee:"color_mode"` // 2
+	Ct        int      `yee:"ct"`         // 1700
+	Rgb       int      `yee:"rgb"`        // 16744192
+	Hue       int      `yee:"hue"`        // 30
+	Sat       int      `yee:"sat"`        // 100
+	Name      string   `yee:"name"`       // ""}
+}
+
+func Unmarshal(data []byte, v interface{}) error {
+	// Check for well-formedness.
+
+	var start, stop int
+
+	var kv = make(map[string]string)
+
+	var line string
+	for i, c := range data {
+		if c == 0x00 {
+			continue
+		}
+		if c == '\r' {
+			continue
+		}
+		if c == '\n' {
+			stop = i - 1
+			line = string(data[start:stop])
+			start = stop + 2
+			if !strings.Contains(line, ":") {
+				continue
+			}
+
+			splitted := strings.Split(line, ":")
+
+			kv[splitted[0]] = splitted[1]
+			//t := reflect.ValueOf(v)
+			//field := t.FieldByName(splitted[0])
+			//fmt.Printf("%v\n", field)
+		}
+	}
+	for k, v := range kv {
+		fmt.Printf("> %s <> %s <\n", k, v)
+	}
+	return nil
+}
+
+//func Unmarshall(data []byte, v interface{}) interface{} {
+//	return
+//}
+
+func Discover() []TmpStruct {
+
+	raddr, err := net.ResolveUDPAddr("udp4", "239.255.255.250:1982")
+	c, _ := net.ListenPacket("udp4", ":0")
+	socket := c.(*net.UDPConn)
+	//json.Unmarshal()
+	bodyRaw := "M-SEARCH * HTTP/1.1\r\n" +
+		"HOST: 239.255.255.250:1982\r\n" +
+		"MAN: \"ssdp:discover\"\r\n" +
+		"ST: wifi_bulb\r\n"
+
+	// ///
+	// listener, err := net.ListenUDP("udp", &laddr)
+	// if err != nil {
+	// 	panic(err)
+	// }
+
+	// sender, err := net.DialUDP("udp", laddr, raddr)
+	// if err != nil {
+	// 	panic(err)
+	// }
+
+	// sender.SetWriteDeadline(time.Now().Add(time.Millisecond * 1000))
+	// sender.SetReadDeadline(time.Now().Add(time.Millisecond * 2000))
+
+	socket.SetReadDeadline(time.Now().Add(time.Second * 2))
+
+	var buf = make([]byte, 1024)
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+
+	var gatheredData = make(map[string][]byte)
+
+	go func() {
+		timeout := time.After(time.Second * 2)
+		defer func() {
+			fmt.Printf("collecting devices ends\n")
+			wg.Done()
+		}()
+		for {
+			select {
+			case <-timeout:
+				fmt.Printf("done xd\n")
+				return
+			default:
+				n, remote, err := socket.ReadFromUDP(buf)
+				if err != nil {
+					return
+				}
+				ipStr := remote.IP.String()
+				_, ok := gatheredData[ipStr]
+				if !ok {
+					var data = make([]byte, 5)
+					data = append(data, buf[:n]...)
+					gatheredData[ipStr] = data
+				} else {
+					gatheredData[ipStr] = append(gatheredData[ipStr], buf[:n]...)
+				}
+
+				//fmt.Printf("%s\n", remote.IP)
+				//fmt.Printf("%s\n", buf)
+			}
+		}
+	}()
+
+	fmt.Println("sending body...")
+	n, err := socket.WriteToUDP([]byte(bodyRaw), raddr)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("body sent! %d\n", n)
+
+	fmt.Printf("Waiting...\n")
+	wg.Wait()
+	fmt.Printf("Waiting done!\n")
+	// time.Sleep(time.Second * 3)
+
+	x := make([]TmpStruct, 0)
+
+	for _, v := range gatheredData {
+		someStruct := TmpStruct{}
+
+		//fmt.Printf("%#v\n", v)
+		err := Unmarshal(v, &someStruct)
+		if err != nil {
+			panic(err)
+		}
+		x = append(x, someStruct)
+	}
+	fmt.Printf("%d\n", len(gatheredData))
+
+	return x
 }

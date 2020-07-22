@@ -2,6 +2,7 @@ package yeelight
 
 import (
 	"errors"
+	"time"
 )
 
 // Common commands defines shared commands for standard mode and background mode
@@ -11,7 +12,7 @@ type commonCommands struct {
 }
 
 // Temperature sets device temperature, range 1700-6500
-func (c *commonCommands) Temperature(temp, duration int) error {
+func (c *commonCommands) Temperature(temp int, duration time.Duration) error {
 	if temp < 1700 || temp > 6500 {
 		return errors.New("temperature expected range: 1700-6500")
 	}
@@ -22,7 +23,7 @@ func (c *commonCommands) Temperature(temp, duration int) error {
 	}
 
 	return c.commander.executeCommand(
-		partialCommand{c.prefix + "set_ct_abx", params{temp, effect, duration}},
+		partialCommand{c.prefix + "set_ct_abx", params{temp, effect, timeToMs(duration)}},
 	)
 }
 
@@ -31,7 +32,7 @@ func (c *commonCommands) Temperature(temp, duration int) error {
 // example: sets color to red, and then blue
 //   bulb.RGB(0xff0000, 0)
 //   bulb.RGB(0x0000ff, 0)
-func (c *commonCommands) RGB(rgb, duration int) error {
+func (c *commonCommands) RGB(rgb int, duration time.Duration) error {
 	if rgb < 0 || rgb > 0xffffff {
 		return errors.New("rgb expected range: 0-0xFFFFFF")
 	}
@@ -42,12 +43,12 @@ func (c *commonCommands) RGB(rgb, duration int) error {
 	}
 
 	return c.commander.executeCommand(
-		partialCommand{c.prefix + "set_rgb", params{rgb, effect, duration}},
+		partialCommand{c.prefix + "set_rgb", params{rgb, effect, timeToMs(duration)}},
 	)
 }
 
 // HSV sets device color in HSV form. hue range: 0-359, saturation range: 0-100
-func (c *commonCommands) HSV(hue, saturation, duration int) error {
+func (c *commonCommands) HSV(hue, saturation int, duration time.Duration) error {
 	if hue < 0 || hue > 359 {
 		return errors.New("hue expected range: 0-359")
 	}
@@ -62,12 +63,12 @@ func (c *commonCommands) HSV(hue, saturation, duration int) error {
 	}
 
 	return c.commander.executeCommand(
-		partialCommand{c.prefix + "set_hsv", params{hue, saturation, effect, duration}},
+		partialCommand{c.prefix + "set_hsv", params{hue, saturation, effect, timeToMs(duration)}},
 	)
 }
 
 // Brightness sets device brightness in range 1-100
-func (c *commonCommands) Brightness(brightness, duration int) error {
+func (c *commonCommands) Brightness(brightness int, duration time.Duration) error {
 	if brightness < 1 || brightness > 100 {
 		return errors.New("brightness expected range: 1-100")
 	}
@@ -78,7 +79,7 @@ func (c *commonCommands) Brightness(brightness, duration int) error {
 	}
 
 	return c.commander.executeCommand(
-		partialCommand{c.prefix + "set_bright", params{brightness, effect, duration}},
+		partialCommand{c.prefix + "set_bright", params{brightness, effect, timeToMs(duration)}},
 	)
 }
 
@@ -109,37 +110,37 @@ func (c *commonCommands) SetDefault() error {
 	)
 }
 
-func (c *commonCommands) PowerOn(duration int) error {
+func (c *commonCommands) PowerOn(duration time.Duration) error {
 	effect, err := chooseEffect(duration)
 	if err != nil {
 		return err
 	}
 
 	return c.commander.executeCommand(
-		partialCommand{c.prefix + "set_power", params{"on", effect, duration}},
+		partialCommand{c.prefix + "set_power", params{"on", effect, timeToMs(duration)}},
 	)
 }
 
 // PowerOnWithMode behaves similarly to ordinal PowerOn except it can sets device directly to given Mode
-func (c *commonCommands) PowerOnWithMode(duration int, mode Mode) error {
+func (c *commonCommands) PowerOnWithMode(duration time.Duration, mode Mode) error {
 	effect, err := chooseEffect(duration)
 	if err != nil {
 		return err
 	}
 
 	return c.commander.executeCommand(
-		partialCommand{c.prefix + "set_power", params{"on", effect, duration, int(mode)}},
+		partialCommand{c.prefix + "set_power", params{"on", effect, timeToMs(duration), int(mode)}},
 	)
 }
 
-func (c *commonCommands) PowerOff(duration int) error {
+func (c *commonCommands) PowerOff(duration time.Duration) error {
 	effect, err := chooseEffect(duration)
 	if err != nil {
 		return err
 	}
 
 	return c.commander.executeCommand(
-		partialCommand{c.prefix + "set_power", params{"off", effect, duration}},
+		partialCommand{c.prefix + "set_power", params{"off", effect, timeToMs(duration)}},
 	)
 }
 

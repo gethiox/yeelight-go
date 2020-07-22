@@ -3,6 +3,7 @@ package yeelight
 import (
 	"encoding/json"
 	"net"
+	"time"
 )
 
 // Music mode in theory supports all commands, but due to device behaviour
@@ -12,10 +13,10 @@ import (
 // I decided to expose only most useful commands here
 // Also in music mode device doesn't respond on commands so errors cannot be returned
 type musicSupportedCommands interface {
-	Temperature(temp, duration int)
-	RGB(rgb, duration int)
-	HSV(hue, saturation, duration int)
-	Brightness(brightness, duration int)
+	Temperature(temp int, duration time.Duration)
+	RGB(rgb int, duration time.Duration)
+	HSV(hue, saturation int, duration time.Duration)
+	Brightness(brightness int, duration time.Duration)
 	StartColorFlow(count int, action CfAction, flowExpression FlowExpression)
 	StopColorFlow()
 }
@@ -57,19 +58,19 @@ func NewMusic(conn net.Conn) *Music {
 	return music
 }
 
-func (m *Music) Temperature(temp, duration int) {
+func (m *Music) Temperature(temp int, duration time.Duration) {
 	_ = m.commonCommands.Temperature(temp, duration)
 }
 
-func (m *Music) RGB(rgb, duration int) {
+func (m *Music) RGB(rgb int, duration time.Duration) {
 	_ = m.commonCommands.RGB(rgb, duration)
 }
 
-func (m *Music) HSV(hue, saturation, duration int) {
+func (m *Music) HSV(hue, saturation int, duration time.Duration) {
 	_ = m.commonCommands.HSV(hue, saturation, duration)
 }
 
-func (m *Music) Brightness(brightness, duration int) {
+func (m *Music) Brightness(brightness int, duration time.Duration) {
 	_ = m.commonCommands.Brightness(brightness, duration)
 }
 

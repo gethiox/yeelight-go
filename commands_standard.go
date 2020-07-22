@@ -19,14 +19,19 @@ func (c *standardCommands) Prop(props ...Property) (map[string]interface{}, erro
 	return data, errors.New("not implemented")
 }
 
-// CronAdd sets timer which invokes given CronType operation (power off is only supported)
-func (c *standardCommands) CronAdd(jobType CronType, minutes int) error {
-	if !(jobType == CRON_TYPE_POWER_OFF) {
+// cronAdd sets timer which invokes given CronType operation (power off is only supported)
+func (c *standardCommands) cronAdd(jobType CronType, minutes int) error {
+	if jobType != CRON_TYPE_POWER_OFF {
 		return errors.New("jobType needs to be 0 (power off/timer)")
 	}
 	return c.commander.executeCommand(
 		partialCommand{"cron_add", params{int(jobType), minutes}},
 	)
+}
+
+// SetTimer powers off device after given number of minutes
+func (c *standardCommands) SetTimer(minutes int) error {
+	return c.cronAdd(CRON_TYPE_POWER_OFF, minutes)
 }
 
 // Not implemented! TODO: TODO
@@ -57,35 +62,35 @@ func (c *standardCommands) SetAdjust(action Action, prop AdjustProp) error {
 }
 
 // AdjustBright adjusts bright, range: -100 - 100
-func (c *standardCommands) AdjustBright(percentage, duration int) error {
+func (c *standardCommands) AdjustBright(percentage, duration time.Duration) error {
 	if percentage < -100 || percentage > 100 {
 		return errors.New("percentage range must be -100 - 100")
 	}
 
 	return c.commander.executeCommand(
-		partialCommand{"adjust_bright", params{percentage, duration}},
+		partialCommand{"adjust_bright", params{percentage, timeToMs(duration)}},
 	)
 }
 
 // AdjustTemperature adjusts temperature, range: -100 - 100
-func (c *standardCommands) AdjustTemperature(percentage, duration int) error {
+func (c *standardCommands) AdjustTemperature(percentage, duration time.Duration) error {
 	if percentage < -100 || percentage > 100 {
 		return errors.New("percentage range must be -100 - 100")
 	}
 
 	return c.commander.executeCommand(
-		partialCommand{"adjust_ct", params{percentage, duration}},
+		partialCommand{"adjust_ct", params{percentage, timeToMs(duration)}},
 	)
 }
 
 // AdjustColor adjusts color, range: -100 - 100
-func (c *standardCommands) AdjustColor(percentage, duration int) error {
+func (c *standardCommands) AdjustColor(percentage, duration time.Duration) error {
 	if percentage < -100 || percentage > 100 {
 		return errors.New("percentage range must be -100 - 100")
 	}
 
 	return c.commander.executeCommand(
-		partialCommand{"adjust_color", params{percentage, duration}},
+		partialCommand{"adjust_color", params{percentage, timeToMs(duration)}},
 	)
 }
 
@@ -138,63 +143,64 @@ func findIPv4Addr(iface net.Interface) (net.IP, error) {
 	return net.IP{}, errors.New(fmt.Sprintf("IPv4 not found on \"%s\" interfgace", iface.Name))
 }
 
+func openSocket(ip net.IP) (net.Listener, error) {
+	// var ipAddr = "" // binding on all interfaces
+	address := fmt.Sprintf("%s:0", ip.String()) // :0 for automatic port selection
+
+	listener, err := net.Listen("tcp", address)
+	if err != nil {
+		return nil, err
+	}
+
+	return listener, nil
+}
+
 // StartMusic starts tries to run music mode.
 // You can perform operations on returned music object without quota limitations
 // Interface name can be passed to select exact interface for music server on first assigned IPv4 address
 // (bulb needs to connect to opened socket by client), empty string may be passed ("") for
 // trying to connect on first available (up and non-loopback) interface and first assigned IPv4 address
-func (c *standardCommands) StartMusic(ifaceName string) (musicSupportedCommands, error) {
-	// TODO: Check "ignored" error when iptables not realoaded (personal archlinux issue)
+func (c *standardCommands) StartMusic() (musicSupportedCommands, error) {
 	var (
 		ifacesToTry []net.Interface
 		err         error
 	)
 
-	if ifaceName == "" {
-		log.Printf(
-			"[music] iface name not specified, trying to bind on " +
-				"first available up and not loopback (localhost) interface...")
-		ifacesToTry, err = net.Interfaces()
-		if err != nil {
-			return nil, fmt.Errorf("failed to read available interfaces: %v", err)
-		}
-	} else {
-		log.Printf("[music] trying to bind on \"%s\" iface...", ifaceName)
-		ifacesToTry, err = findIface(ifaceName)
-		if err != nil {
-			return nil, fmt.Errorf("[music] initialization failed: %v", err)
-		}
+	ifacesToTry, err = net.Interfaces()
+	if err != nil {
+		return nil, fmt.Errorf("failed to read available interfaces: %v", err)
 	}
 
 	var (
-		binded      bool
-		bindedIface net.Interface
-		// As far as yeelight devices mainly supports ipv4 only, I'm assuming IPv4 communication only
-		bindedIPv4Addr net.IP
-		bindedPort     int
-		listener       net.Listener
+		binded           bool
+		bindedIface      net.Interface
+		bindedIPv4Addr   net.IP
+		bindedConnection *net.TCPAddr
+		listener         net.Listener
 	)
 
 	for _, iface := range ifacesToTry {
 		if iface.Flags&net.FlagUp == 0 || iface.Flags&net.FlagLoopback != 0 {
-			// Interface is neither up or non-loopback (localhost)
-			continue
+			continue // Interface is neither up or non-loopback (localhost)
 		}
 
 		bindedIPv4Addr, err = findIPv4Addr(iface)
 		if err != nil {
-			// failing find a valid IPv4 address
-			continue
+			continue // failing find a valid IPv4 address
 		}
 
 		// TODO: subnet validation could be invoked here
-
-		listener, bindedPort, err = openSocket(bindedIPv4Addr.String(), 1023, 1<<16-1) // first 1024 ports are root-only
+		listener, err = openSocket(bindedIPv4Addr) // first 1024 ports are root-only
 		if err != nil {
-			// port opening failed on 1024-65535 range
-			continue
+			continue // port opening failed
 		}
 
+		tcpAddr, ok := listener.Addr().(*net.TCPAddr)
+		if !ok {
+			return nil, errors.New("listener address is somehow not a *net.TCPAddr type")
+		}
+
+		bindedConnection = tcpAddr
 		bindedIface = iface
 		binded = true
 		break
@@ -203,8 +209,9 @@ func (c *standardCommands) StartMusic(ifaceName string) (musicSupportedCommands,
 	if !binded {
 		return nil, fmt.Errorf("failed to bind on any of given interfaces")
 	}
+
 	log.Printf("[music] binded on \"%v\" iface on \"%s\" address on \"%d\" port",
-		bindedIface.Name, bindedIPv4Addr, bindedPort)
+		bindedIface.Name, bindedIPv4Addr, bindedConnection.Port)
 
 	incomingConnection := make(chan net.Conn)
 	defer close(incomingConnection)
@@ -214,7 +221,7 @@ func (c *standardCommands) StartMusic(ifaceName string) (musicSupportedCommands,
 		log.Printf("[music] Waiting for a device connection...")
 		conn, err := listener.Accept()
 		if err != nil {
-			log.Printf("[music] Device fonnection failed: %v", err)
+			log.Printf("[music] Device connection failed: %v", err)
 			return
 		}
 		log.Printf("[music] Device connected!")
@@ -229,12 +236,12 @@ func (c *standardCommands) StartMusic(ifaceName string) (musicSupportedCommands,
 
 	log.Printf("[music] Initializating Music Mode...")
 	err = c.commander.executeCommand(
-		partialCommand{"set_music", params{1, bindedIPv4Addr, bindedPort}},
+		partialCommand{"set_music", params{1, bindedIPv4Addr, bindedConnection.Port}},
 	)
+	// err main contains "map[code:-5001 message:invalid params]" if Music mode is already running
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("[music] Music Mode Initialized!")
 
 	select {
 	case conn := <-incomingConnection:
@@ -242,10 +249,9 @@ func (c *standardCommands) StartMusic(ifaceName string) (musicSupportedCommands,
 		if music == nil {
 			return nil, errors.New("[music] Connection failed")
 		}
-
+		log.Printf("[music] Music Mode Initialized!")
 		return music, nil
-	case <-time.After(time.Second * 2): // 2 second timeout
-		log.Println("[music] ")
+	case <-time.After(time.Second * 2):
 		err := listener.Close()
 		if err != nil {
 			log.Printf("[music] failed to close music server: %v", err)
@@ -256,12 +262,12 @@ func (c *standardCommands) StartMusic(ifaceName string) (musicSupportedCommands,
 
 // chooseEffect returns effect string Accordingly to given duration value.
 // Chooses between "sudden" and "smooth".
-func chooseEffect(duration int) (string, error) {
+func chooseEffect(duration time.Duration) (string, error) {
 	// if duration != 0 && duration < 30 {
 	//	return "", errors.New("Ooops")
 	// }
 
-	if duration == 0 {
+	if duration == time.Duration(0) {
 		return "sudden", nil
 	}
 	return "smooth", nil

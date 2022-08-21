@@ -106,7 +106,7 @@ func main() {
 
 			// trying to start music server on "enp0s25" interface
 			// empty name ("") may be passed for starting music server on first found interface
-			err, music := bulb.StartMusic("enp0s25")
+			music, err := bulb.StartMusic("enp0s25")
 			if err != nil {
 				panic(err)
 			}
